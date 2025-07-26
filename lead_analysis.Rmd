@@ -1,0 +1,609 @@
+---
+title: "Lead Data Analysis"
+author: "Wafaa Stohy"
+date: "2025-06-26"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+#Introduction
+In this report, I perform a comprehensive statistical analysis on the lead concentration dataset. The analysis includes descriptive statistics, normality testing, homoscedasticity assessment, correlation analysis, and hypothesis testing.
+
+# Data Import
+# Load the dataset from the saved RData file
+```{r}
+load("D:/R programming/OMNIGENICS/project/lead.RData")
+```
+
+# Initial Data Exploration
+# View summary statistics of the dataset
+
+```{r}
+summary(lead)
+```
+
+# Show the structure of the dataset
+
+```{r}
+str(lead)
+```
+
+# Data Cleaning and Variable Labeling
+# Convert categorical codes into readable factor labels
+
+```{r}
+
+lead$Area <- factor(lead$Area, labels = c("El Paso", "Texas", "USA"))
+lead$Sex <- factor(lead$Sex, levels = c(1, 2), labels = c("Male", "Female"))
+lead$Exposed <- factor(lead$Exposed, levels = c(0, 1), labels = c("Not_Exposed", "Exposed"))
+
+```
+
+# Convert MAXFWT to integer (if needed)
+
+```{r}
+lead$MAXFWT <- as.integer(lead$MAXFWT)
+```
+
+# Check the structure and summary again after cleaning
+
+```{r}
+str(lead)
+summary(lead)
+```
+
+## Descriptive Statistics
+
+This section summarizes the data using descriptive statistics for both categorical and numeric variables.
+
+### Categorical Variables
+
+We use a frequency table to explore how observations are distributed across **Area**, **Sex**, and **Exposure status**.
+
+```{r}
+table(lead$Area, lead$Sex, lead$Exposed)
+```
+
+### Numeric Variables
+
+Now, we calculate basic descriptive statistics for all numeric variables:
+
+- Mean  
+- Median  
+- Minimum  
+- Maximum  
+- First Quartile (Q1)  
+- Third Quartile (Q3)  
+
+#### Extract numeric columns
+
+```{r}
+numeric_cols <- sapply(lead, is.numeric)
+numeric_data <- lead[, numeric_cols]
+```
+
+#### Mean of numeric variables
+
+```{r}
+means <- colMeans(numeric_data, na.rm = TRUE )
+means
+```
+
+#### Median of numeric variables
+
+```{r}
+medians <- apply(numeric_data, 2, median, na.rm = TRUE)
+medians
+```
+
+#### Minimum values
+
+```{r}
+mins <- apply(numeric_data, 2, min, na.rm = TRUE)
+mins
+```
+
+#### Maximum values
+
+```{r}
+maxs <- apply(numeric_data, 2, max, na.rm = TRUE)
+maxs
+```
+
+#### First Quartile (Q1)
+
+```{r}
+Q1 <- apply(numeric_data, 2, quantile, probs = 0.25, na.rm = TRUE )
+Q1
+```
+
+#### Third Quartile (Q3)
+
+```{r}
+Q3 <- apply(numeric_data, 2, quantile, probs = 0.75, na.rm = TRUE )
+Q3
+```
+
+### Interpretation
+
+From these results:
+- The **mean and median** help us understand the central tendency of each variable.
+- The **minimum and maximum** values give us an idea of the range.
+- The **first and third quartiles (Q1, Q3)** help identify data spread and potential outliers.
+
+These values are useful in detecting skewness, variability, and data quality issues.
+
+# 📊 Graphics
+# Bar chart showing gender distribution
+
+```{r}
+barplot(table(lead$Sex), main = "Gender Distribution",
+        xlab = "Gender", ylab = "Count", col = c("skyblue", "pink"))
+```
+This bar plot shows the distribution of gender in the dataset. There are more males than females. The height of each bar represents the number of people in each group.
+
+# Bar chart showing mean MAXFWT for each gender
+
+```{r}
+barplot(tapply(lead$MAXFWT, lead$Sex, mean, na.rm= TRUE),
+        main = "Mean MAXFWT by Gender", xlab = "Gender", 
+        ylab = "Mean MAXFWT", col = c("darkblue", "gold") )
+```
+-The bar plot shows that females have a higher average MAXFWT than males.
+-This suggests better finger-wrist tapping performance among females.
+-It may reflect gender differences in motor skills or lead exposure effects.
+
+# Histogram showing the distribution of Age
+
+```{r}
+hist(lead$Age, main = "Hiatogram of Age", xlab = "Age", 
+     ylab = "Frequency", col = "lightgreen", border = "black")
+```
+*The age distribution is right-skewed — most participants are young, and fewer are older.
+
+*The data does not follow a normal distribution, as most values are concentrated in lower age ranges.
+
+*No clear outliers are seen in the chart; the tail extends gradually toward older ages.
+
+# Histogram showing the distribution of MAXFWT
+
+```{r}
+hist(lead$MAXFWT, main = "Hiatogram of MAXFWT", xlab = "MAXFWT", 
+     ylab = "Frequency", col = "green", border = "darkgreen")
+```
+#Nature of the MAXFWT Distribution:
+
+*The distribution is skewed to the right (positively skewed).
+*It has a long right tail, with values stretching toward higher click counts.
+*There are outliers around 20 and 80 clicks.
+*It does not follow a normal distribution.
+
+The data also show significant differences between males and females in motor performance, with varying patterns of lead exposure over the years. Because the distribution is skewed and contains extreme values, it requires specialized statistical methods that can handle non-normal data.
+
+
+# Scatterplot of Ld72 vs MAXFWT colored by gender
+
+```{r echo=TRUE}
+plot(lead$Ld72, lead$MAXFWT, main = "Scatterplot of Ld72 vs MAXFWT by Gender",
+     xlab = "Ld72", ylab = "MAXFWT", 
+     col = ifelse(lead$Sex== "Male","blue", "red"),
+     pch = ifelse(lead$Sex== "Male", 1, 2))
+abline(lm(MAXFWT ~ Ld72 , data = lead, subset = Sex== "Male"),
+       col= "blue", lwd= 2)
+abline(lm(MAXFWT ~ Ld72 , data = lead, subset = Sex== "Female"),
+       col= "red", lwd= 2)
+```
+# Interpretation
+This scatterplot shows the relationship between lead levels in 1972 (Ld72) and finger-wrist tapping performance (MAXFWT), with data separated by gender:
+
+1- Blue circles and line represent males.
+2- Red triangles and line represent females.
+
+-For males, the blue trend line goes downward. This suggests a negative relationship: as lead levels increase, their tapping performance tends to decrease.
+
+-For females, the red trend line is nearly flat, which means no strong relationship between lead exposure and tapping performance.
+
+-Boys may be more affected by lead exposure, showing reduced motor function with higher lead levels.
+
+-Girls appear to be less affected, or the effect is not as strong or visible.
+
+*This may suggest that lead exposure negatively affects motor skills  in males more than in females.
+
+# Boxplot of Age grouped by Ld72
+
+```{r}
+boxplot(Age ~ factor(lead$Ld72), data = lead, main= 'Boxplot of Age by Ld72_F',
+        xlab = "Ld72_F", ylab = "Age", col= "orange")
+```
+#Interpretation 
+This boxplot shows how Age is distributed across different levels of Ld72_F (lead levels in 1972 grouped or categorized):
+
+-Each vertical box represents the age range for children at a certain lead level group.
+
+-The boxes show the spread of ages: from youngest to oldest.
+
+-In many groups, younger children (ages 5–10) are more common.
+
+-Some boxes are tall (more variation in ages), while others are short (less variation).
+
+-Outliers appear as small horizontal lines outside the boxes in some groups.
+
+##Observation:
+There is no clear increasing or decreasing pattern between lead exposure level and age. However, lead exposure is present across all ages, including very young children, indicating early environmental exposure.
+
+# Boxplot of Age grouped by Ld73
+
+```{r}
+boxplot(Age ~ factor(lead$Ld73), data = lead, main= 'Boxplot of Age by Ld73_F',
+        xlab = "Ld73_F", ylab = "Age", col= "lavender")
+```
+#Interpretation 
+This boxplot shows how Age is distributed across different levels of Ld73_F (lead levels in 1973):
+
+- Each vertical box represents the age range of children with a certain lead level group.
+
+- Most of the children are between ages 6 and 14, across all lead levels.
+
+- Some groups (like Ld73_F = 15, 32, 45) have a wide box, meaning the children in those groups have more variation in age.
+
+- Other groups (like Ld73_F = 30, 50, 58) have very narrow boxes, meaning the children are similar in age.
+
+- The lines inside the boxes show the median age (middle value).
+
+- The dots or short lines outside the boxes are outliers — ages that are much higher or lower than the rest of the group.
+
+##Observation:
+There is no clear pattern between lead level and age. Children of many different ages are found at each level of lead exposure.
+This suggests that in 1973, lead exposure was affecting children across a wide age range, including both younger and older children.
+
+#Outlier Detection
+# Explore the data for any existing outliers, identify them (do NOT remove them if found).
+
+```{r}
+for (var_name in names(numeric_data)) {
+  outliers <- boxplot(numeric_data[[var_name]], plot = FALSE)$out
+  if (length(outliers) > 0) {
+    cat("\nVariable:", var_name, "\n")
+    cat("Number of outliers:", length(outliers), "\n")
+    print(lead[lead[[var_name]] %in% outliers, ])
+  }
+}
+```
+#What do you think?
+Several outliers were detected in the dataset:
+
+Id has 20 outliers, which likely represent a distinct group of participants added later in the study.
+
+Iqf has 2 outliers (very high and low IQ values), which might influence statistical analysis.
+
+Lead_type shows 24 outliers, indicating a clear separation between exposure levels.
+
+Ld72 (lead level in 1972) has 10 outliers, including very high values likely due to environmental exposure.
+
+MAXFWT has 7 outliers, including extremely high or low tapping scores that may affect correlation analysis.
+
+These outliers are not removed but should be noted, as they can impact results and assumptions of normality or homogeneity in further tests.
+
+# Testing for normality / homoscedasticity (for all features mentioned above)
+
+# Define variables to test
+
+```{r}
+
+testing_vars <- c("Age", "Iqf", "Ld72", "Ld73", "Totyrs", "MAXFWT")
+```
+
+#Normality Tests 
+
+```{r}
+
+cat("Normality Tests:\n")
+for(var in testing_vars) {
+  cat("\nVariable:", var, "\n")
+
+  qqnorm(lead[[var]], main = paste("Q-Q Plot for", var))
+  qqline(lead[[var]], col = "maroon")
+
+  shapiro <- shapiro.test(lead[[var]])
+  cat("Shapiro-Wilk p-value:", shapiro$p.value, "\n")
+
+  hist(lead[[var]],
+       main = paste("Histogram of", var),
+       xlab = var,
+       col = "salmon",
+       border = "white")
+}
+```
+
+#Homoscedasticity Tests
+
+```{r}
+
+cat("\n\nHomoscedasticity Tests (between genders):\n")
+
+# Ensure 'Sex' is treated as a factor
+is.factor(lead$Sex)
+
+# Install and load the 'car' package if not already installed
+install.packages("car")
+library(car)
+
+for(var in testing_vars) {
+  cat("\nVariable:", var, "\n")
+  
+  # Levene's Test
+
+  levene <- leveneTest(lead[[var]] ~ lead$Sex)
+  print(levene)
+  
+  # Bartlett's Test
+
+  bartlett <- bartlett.test(lead[[var]] ~ lead$Sex)
+  print(bartlett)
+}
+```
+
+#What do you think
+
+Based on the results of the normality and homoscedasticity tests:
+
+Most variables (Age, Ld72, Ld73, Totyrs, MAXFWT) are not normally distributed (Shapiro-Wilk p-value < 0.05). Only Iqf appears normally distributed.
+-Therefore, non-parametric tests are more appropriate for further analysis.
+
+The variance between genders is mostly equal for all variables (Levene's and Bartlett's p-values > 0.05),
+except for MAXFWT, which showed unequal variance in Bartlett’s test (p = 0.0075). This should be considered when comparing groups.
+
+#Correlation Analysis
+Exploring the relationship (correlation) between different variables in the dataset, especially how MAXFWT (maximum finger-wrist tapping score) relates to Ld72 and Ld73 (blood lead levels in 1972 and 1973).
+
+#Calculate Spearman Correlation Coefficients
+Most variables are not normally distributed (based on Shapiro-Wilk test) and there are outliers in the data.So,Spearman is better for non-normal data and outliers.
+
+```{r}
+
+cor(lead$MAXFWT, lead$Ld72, use = "complete.obs", method = "spearman")
+cor(lead$MAXFWT, lead$Ld73, use = "complete.obs", method = "spearman")
+```
+#Correlation Results Interpretation
+We calculated the Spearman correlation between:
+
+MAXFWT and Ld72: -0.398
+MAXFWT and Ld73: -0.318
+
+These values show a moderate negative correlation. This means:
+
+Higher blood lead levels (Ld72 or Ld73) are associated with lower MAXFWT scores, suggesting a possible negative impact of lead exposure on children's motor performance.
+
+The negative values do not indicate a strong relationship, but there is a noticeable trend.
+
+#Create Correlation Matrix
+
+```{r}
+cormat = cor(lead[, c("Age", "Iqf", "Ld72", "Ld73","Totyrs","MAXFWT")], 
+             use = "complete.obs", method = "spearman")
+```
+
+#Visualize the Correlations
+```{r}
+install.packages("corrplot")
+install.packages("RColorBrewer")
+library(corrplot)
+library(RColorBrewer)
+corrplot(cormat, method = "color", col = brewer.pal(n = 8, name = "RdBu"), 
+         tl.col = "black", tl.srt = 45)
+```
+# Interpretation
+A positive correlation (closer to +1) means both variables increase together.
+
+A negative correlation (closer to -1) means as one increases, the other decreases.
+
+Values near 0 indicate no strong relationship.
+
+###Long-term Effect
+
+Lead level in 1972 is related to current age.
+
+This means lead may stay in the body and affect people for a long time.
+
+###Stable Lead Levels
+
+Lead levels in 1972 and 1973 are almost the same.
+
+This shows that exposure continued or lead stays in the body for a long time.
+
+#Confidence Intervals for MAXFWT (per Gender)
+We estimate the average range in which the true mean of MAXFWT lies for each gender, using different confidence levels.
+
+```{r}
+
+# Subset MAXFWT values for males and females
+males <- subset(lead, Sex == "Male")
+females <- subset(lead, Sex == "Female")
+
+# Male confidence intervals
+cat("Confidence Intervals for Males (MAXFWT):\n")
+cat("90% CI:", t.test(males$MAXFWT, conf.level = 0.90)$conf.int, "\n")
+cat("95% CI:", t.test(males$MAXFWT, conf.level = 0.95)$conf.int, "\n")
+cat("99% CI:", t.test(males$MAXFWT, conf.level = 0.99)$conf.int, "\n\n")
+
+# Female confidence intervals
+cat("Confidence Intervals for Females (MAXFWT):\n")
+cat("90% CI:", t.test(females$MAXFWT, conf.level = 0.90)$conf.int, "\n")
+cat("95% CI:", t.test(females$MAXFWT, conf.level = 0.95)$conf.int, "\n")
+cat("99% CI:", t.test(females$MAXFWT, conf.level = 0.99)$conf.int, "\n")
+
+```
+#How would you describe those inferences and what do you observe in terms of the interval width when request higher confidence (i.e. 99% C.I.)?
+A 90% confidence interval means:
+"We are 90% confident that the true mean lies within this range."
+
+A 95% confidence interval means:
+  "We are 95% confident the true mean lies in this range."
+
+A 99% confidence interval means:
+  "We are 99% confident the true mean is within this wider range."
+
+#What happens to interval width when confidence increases (e.g. 99% CI)?
+The higher the confidence level (like 99%), the wider the confidence interval.
+This is because we need a bigger range to be more sure that the true mean is inside it.
+A higher confidence level means less precision but more certainty.
+
+## Hypothesis Testing for MAXFWT by Gender
+
+### Hypotheses
+
+- **H₀ (Null Hypothesis):** The mean of MAXFWT is equal for males and females.  
+- **H₁ (Alternative Hypothesis):** The mean of MAXFWT is different between males and females.
+
+```{r}
+# Subset data
+male_data <- lead$MAXFWT[lead$Sex == "Male"]
+female_data <- lead$MAXFWT[lead$Sex == "Female"]
+
+# Two-sample t-test (equal variance assumed)
+t.test(MAXFWT ~ Sex, data = lead, var.equal = TRUE)
+```
+#Interpretation
+-The p-value is greater than 0.05, so we do not reject the null hypothesis.
+-That means we do not have strong evidence that the means are different between males and females.
+
+#Check Test Assumptions
+#1. Normality Test (Shapiro-Wilk)
+
+```{r}
+shapiro.test(male_data)
+shapiro.test(female_data)
+```
+#Interpretation
+-If p-value > 0.05 → The data is normal.
+-Male data: p-value < 0.05 → Not normal
+-Female data: p-value > 0.05 → Normal
+So, normality is not perfectly met, but the t-test is usually robust if sample size is not too small.
+
+#2. Equal Variance Test (Levene's Test)
+
+```{r}
+library(car)
+leveneTest(MAXFWT ~ Sex, data = lead)
+```
+#Interpretation
+-p-value = 0.1778 > 0.05 → We assume equal variances.
+So, the equal variance assumption is met.
+
+## Hypothesis Test: Effect of Ld72 on MAXFWT
+
+We hypothesize that MAXFWT is **lower** in the group with `Ld72 > 40` compared to the group with `Ld72 ≤ 40`.
+
+### Welch Two Sample t-test
+
+```{r}
+t.test(group_high, group_low, alternative = "less", var.equal = FALSE)
+```
+#Interpretation:
+The p-value is less than 0.05, so we reject the null hypothesis (H₀).
+ -This means MAXFWT is significantly lower in the group with Ld72 > 40.
+
+#Assumption Check: Equal Variance (Levene’s Test)
+
+```{r}
+install.packages("car")
+library(car)
+lead$Ld72_group <- ifelse(lead$Ld72 > 40, "High", "Low")
+leveneTest(MAXFWT ~ Ld72_group, data = lead)
+
+lead$Group <- paste(lead$Sex, ifelse(lead$Ld72 > 40, "HighLead", "LowLead"), sep = "_")
+lead$Group
+```
+#Interpretation:
+-Since p > 0.05, we accept the null hypothesis of equal variances.
+-This means the variance assumption is met, even though we used var.equal = FALSE to be cautious.
+
+#MAXFWT Comparison between 4 Groups Based on Gender and Lead Level
+-We want to check if the finger-wrist tapping score (MAXFWT) is different between 4 groups:
+
+1- Male with High Lead
+2- Male with Low Lead
+3- Female with High Lead
+4- Female with Low Lead
+
+#Step 1: Assumptions Check
+1. Normality Test (Shapiro-Wilk)
+
+```{r}
+by(lead$MAXFWT, lead$Group, shapiro.test)
+```
+# 2. Equal Variance Test (Levene's Test)
+
+```{r}
+leveneTest(MAXFWT ~ Group, data = lead)
+```
+Assumption met: All groups have similar variances (p > 0.05)
+
+#Step 2: ANOVA Test
+-We used a one-way ANOVA to test if there are any differences in MAXFWT between the 4 groups.
+```{r}
+anova_result <- aov(MAXFWT ~ Group, data = lead)
+summary(anova_result)
+```
+Conclusion: There is a statistically significant difference in MAXFWT between at least two of the groups.
+
+#Step 3: Post-hoc Test (Tukey HSD)
+
+```{r}
+TukeyHSD(anova_result)
+```
+All other comparisons	> 0.05	Not statistically different
+
+#Linear Regression Analysis
+##Goal:
+We want to test if higher blood lead concentration in 1973 (Ld73) is related to lower motor performance (MAXFWT). We use a simple linear regression model.
+
+###Fit the Linear Regression Model
+
+```{r}
+model <- lm(MAXFWT ~ Ld73, data = lead)
+summary(model)
+```
+#Interpretation:
+Intercept (64.37): This is the expected MAXFWT when Ld73 = 0.
+
+Slope for Ld73 (-0.3938):
+For every 1 unit increase in Ld73, MAXFWT decreases by about 0.39 units.
+This means higher lead level is associated with lower motor performance.
+
+P-value (0.0016) < 0.05:
+The relationship is statistically significant, so we can say Ld73 has a meaningful effect on MAXFWT.
+
+#Confidence Interval for the Slope
+
+```{r}
+confint(model)
+```
+#Interpretation:
+We are 95% confident that the true slope lies between -0.63 and -0.15.
+Since the entire range is below zero, the negative relationship is confirmed.
+
+# Prediction: MAXFWT when Ld73 = 100 μg/100 ml
+
+```{r}
+new_lead <- data.frame(Ld73 = 100)
+predict(model, newdata = new_lead)
+```
+#Interpretation:
+If a person's lead level in 1973 was 100 μg/100 ml, the model predicts their MAXFWT score would be approximately 25, which is much lower than the average.
+This supports the idea that high lead levels are associated with poor motor function.
+
+#Conclusion:
+The regression analysis shows a significant negative effect of lead concentration (Ld73) on motor ability (MAXFWT).
+
+The slope is significantly negative, and the prediction at high lead levels confirms a sharp drop in performance.
+
+These results support the hypothesis that lead exposure impairs motor function.
+
+
+
+
+
+
